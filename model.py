@@ -57,6 +57,21 @@ MARKET_CITY = {
     "M9": "Bhubaneswar", "M10": "Hyderabad", "M11": "Bengaluru", "M12": "Chennai",
 }
 
+# Approximate coordinates, degrees north and east, for the network map only.
+# These are NOT from the case brief - the brief supplies a distance matrix, not
+# positions. They are the published locations of the named towns and cities and
+# are used for drawing only. No cost or distance in the model comes from them.
+COORD = {
+    "I1": (24.88, 74.63), "I2": (23.25, 69.67), "I3": (24.58, 80.83),
+    "I4": (21.66, 82.16), "I5": (15.83, 78.04), "I6": (17.33, 76.83),
+    "G1": (28.55, 77.55), "G2": (18.52, 73.86), "G3": (22.57, 88.22),
+    "G4": (13.08, 80.27),
+    "M1": (28.61, 77.21), "M2": (26.91, 75.79), "M3": (26.85, 80.95),
+    "M4": (23.26, 77.41), "M5": (23.02, 72.57), "M6": (18.52, 73.86),
+    "M7": (25.59, 85.14), "M8": (22.57, 88.36), "M9": (20.30, 85.82),
+    "M10": (17.39, 78.49), "M11": (12.97, 77.59), "M12": (13.08, 80.27),
+}
+
 # ---------------------------------------------------------------- case data
 
 # limestone landed price, rupees per tonne of limestone, by belt
