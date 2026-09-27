@@ -15,6 +15,7 @@ import streamlit as st
 
 import model as M
 import ui
+import mapview
 
 st.set_page_config(page_title="The Rookie - Cement Network Design",
                    layout="wide", initial_sidebar_state="expanded")
@@ -240,12 +241,62 @@ ui.kpi_row([
          tone="neutral"),
 ])
 
-tabs = st.tabs(["Network", "Cost", "Flows", "Checks", "Compare", "Method"])
+tabs = st.tabs(["Network map", "Network", "Cost", "Flows", "Checks",
+                "Compare", "Method"])
 
+
+# ---------------------------------------------------------------- map
+
+with tabs[0]:
+    ui.section("The network on the ground")
+    c1, c2, c3 = st.columns([1, 1, 3])
+    show_cem = c1.checkbox("Cement lanes", value=True)
+    show_cli = c2.checkbox("Clinker lanes", value=True)
+    show_closed = c3.checkbox("Also show candidate sites that were not opened",
+                              value=False)
+    st.markdown(mapview.legend_html(), unsafe_allow_html=True)
+    mcol, kcol = st.columns([3, 2])
+    with mcol:
+        chart = mapview.build(sol, open_only=not show_closed,
+                              show_cement=show_cem, show_clinker=show_cli)
+        if chart is None:
+            ui.banner("info", None, "Nothing to draw - there is no feasible network.")
+        else:
+            st.altair_chart(chart, use_container_width=True)
+    with kcol:
+        ui.section("Key to the map")
+        _k = [{"Code": i, "Location": M.PLANT_NAME[i], "Module": k}
+              for i, k in sorted(sol["plants"].items())]
+        _k += [{"Code": g, "Location": M.GRINDER_NAME[g], "Module": k}
+               for g, k in sorted(sol["grinders"].items())]
+        ui.table(pd.DataFrame(_k), centre=["Module"], wrap=["Location"],
+                 pills={"Module": {"S": "neutral", "M": "info", "L": "accent"}})
+        ui.note("Sites opened by the model, in the order they appear on the map.")
+        _m = pd.DataFrame([{"Code": m, "Market": M.MARKET_NAME[m],
+                            "Hub": M.MARKET_CITY[m]} for m in M.MARKETS])
+        ui.table(_m, wrap=["Market"])
+    ui.note(
+        "Triangles are integrated plants, squares are split grinding units, "
+        "circles are the twelve market clusters. Solid lines carry finished "
+        "cement, dashed lines carry clinker, and line thickness is the tonnage. "
+        "Hover any mark for its detail.")
+    ui.banner("info", "How to read this",
+              "The picture that matters is the <b>length</b> of the dashed lines "
+              "against the solid ones. Clinker travels far because it is cheap to "
+              "move, at Rs %.2f a tonne kilometre against Rs %.2f for cement. "
+              "Finished cement travels short, which is why grinding sits next to "
+              "the big markets rather than next to the limestone."
+              % (clinker_rate, cement_rate))
+    ui.note(
+        "<i>On the map itself: the outline is Natural Earth 110m, public domain, "
+        "drawn as a schematic backdrop - it is not a survey map and boundaries "
+        "are indicative only. Site positions are the published locations of the "
+        "named towns, used for drawing alone. Every distance in the optimisation "
+        "comes from the brief's own matrix, never from these positions.</i>")
 
 # ---------------------------------------------------------------- network
 
-with tabs[0]:
+with tabs[1]:
     rows = []
     for i, k in sorted(sol["plants"].items()):
         cl_cap, gr_cap = M.IMOD[k][0], M.IMOD[k][1]
@@ -320,7 +371,7 @@ with tabs[0]:
 
 # ---------------------------------------------------------------- cost
 
-with tabs[1]:
+with tabs[2]:
     comp = [("Annualised capex and fixed opex", sol["fixed"]),
             ("Finished cement freight", sol["cement_freight"]),
             ("Clinker freight", sol["clinker_freight"]),
@@ -382,7 +433,7 @@ with tabs[1]:
 
 # ---------------------------------------------------------------- flows
 
-with tabs[2]:
+with tabs[3]:
     ui.section("Who serves each market")
     frows = []
     for j, m in enumerate(M.MARKETS):
@@ -438,7 +489,7 @@ with tabs[2]:
 
 # ---------------------------------------------------------------- checks
 
-with tabs[3]:
+with tabs[4]:
     ui.section("Every constraint, re-derived from the answer")
     st.caption("These are not the solver's own status flags. Each row is "
                "recomputed from the returned flows, so a silent modelling error "
@@ -496,7 +547,7 @@ with tabs[3]:
 
 # ---------------------------------------------------------------- compare
 
-with tabs[4]:
+with tabs[5]:
     if "pinned" not in st.session_state:
         st.session_state.pinned = []
     c1, c2 = st.columns([1, 4])
@@ -584,7 +635,7 @@ with tabs[4]:
 
 # ---------------------------------------------------------------- method
 
-with tabs[5]:
+with tabs[6]:
     st.markdown("""
 #### What the model decides
 
