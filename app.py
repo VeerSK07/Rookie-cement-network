@@ -23,6 +23,12 @@ MUTED = "#6B7280"
 st.set_page_config(page_title="The Rookie - Cement Network Design",
                    layout="wide", initial_sidebar_state="expanded")
 
+# The sidebar holds two editable tables. The default width squeezes the
+# editable column off the right edge, so widen it.
+st.markdown("""<style>
+[data-testid="stSidebar"] { min-width: 25rem; max-width: 25rem; }
+</style>""", unsafe_allow_html=True)
+
 MOD_CHOICES = ["Closed", "S", "M", "L"]
 
 
@@ -72,18 +78,20 @@ def key(name):
 # ---- demand
 st.sidebar.markdown("### Market demand")
 d0 = pk.get("demand", M.DEMAND_BASE)
-dem_df = pd.DataFrame({
-    "Code": M.MARKETS,
-    "Region": [M.MARKET_NAME[m] for m in M.MARKETS],
-    "Hub": [M.MARKET_CITY[m] for m in M.MARKETS],
-    "Demand (Mt)": [float(x) for x in d0],
-})
-dem_edit = st.sidebar.data_editor(
-    dem_df, hide_index=True, key=key("dem"), use_container_width=True,
-    disabled=["Code", "Region", "Hub"],
-    column_config={"Demand (Mt)": st.column_config.NumberColumn(
-        min_value=0.0, max_value=20.0, step=0.005, format="%.3f")})
-demand = tuple(float(x) for x in dem_edit["Demand (Mt)"])
+scale = st.sidebar.slider(
+    "Scale every market", 0.50, 1.50, 1.00, 0.01, key=key("scale"),
+    help="Multiply all twelve markets at once. 1.00 is the scenario as given.")
+with st.sidebar.expander("Edit individual markets", expanded=False):
+    _vals = []
+    for _j in range(0, 12, 2):
+        _cc = st.columns(2)
+        for _k in (0, 1):
+            _m = M.MARKETS[_j + _k]
+            _vals.append(_cc[_k].number_input(
+                "%s %s" % (_m, M.MARKET_CITY[_m]),
+                min_value=0.0, max_value=20.0, value=float(d0[_j + _k]),
+                step=0.005, format="%.3f", key=key("d_" + _m)))
+demand = tuple(round(v * scale, 6) for v in _vals)
 st.sidebar.caption("Total demand **%.2f Mt** (case base is %.2f Mt)"
                    % (sum(demand), sum(M.DEMAND_BASE)))
 
@@ -106,16 +114,18 @@ st.sidebar.caption("Capital recovery factor **%.4f** - each Rs 100 crore of cape
                                                       100 * M.crf(wacc, life)))
 
 with st.sidebar.expander("Limestone price by belt"):
-    ls_df = pd.DataFrame({
-        "Code": M.INTEGRATED,
-        "Belt": [M.PLANT_NAME[i] for i in M.INTEGRATED],
-        "Rs / tonne": [float(M.LIMESTONE_PRICE[i]) for i in M.INTEGRATED],
-    })
-    ls_edit = st.data_editor(ls_df, hide_index=True, key=key("ls"),
-                             use_container_width=True, disabled=["Code", "Belt"],
-                             column_config={"Rs / tonne": st.column_config.NumberColumn(
-                                 min_value=50.0, max_value=600.0, step=1.0, format="%.0f")})
-    limestone_price = tuple(zip(ls_edit["Code"], (float(x) for x in ls_edit["Rs / tonne"])))
+    _lsv = []
+    for _j in range(0, 6, 2):
+        _cc = st.columns(2)
+        for _k in (0, 1):
+            _i = M.INTEGRATED[_j + _k]
+            _short = M.PLANT_NAME[_i].split("-")[0].split(" (")[0]
+            _lsv.append(_cc[_k].number_input(
+                "%s %s" % (_i, _short),
+                min_value=50.0, max_value=600.0,
+                value=float(M.LIMESTONE_PRICE[_i]), step=1.0, format="%.0f",
+                key=key("ls_" + _i)))
+limestone_price = tuple(zip(M.INTEGRATED, _lsv))
 
 # ---- technical constraints
 st.sidebar.markdown("### Constraints")
